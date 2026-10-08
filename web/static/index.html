@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wireless Android Device Manager</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        dark: {
+                            900: '#0b0f19',
+                            800: '#111827',
+                            700: '#1f2937',
+                            600: '#374151'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body class="bg-dark-900 text-gray-100 min-h-screen flex flex-col">
+
+    <!-- Top Navigation Bar -->
+    <header class="border-b border-gray-800 bg-dark-800/80 backdrop-blur sticky top-0 z-30 px-6 py-4 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                <i data-lucide="smartphone" class="w-6 h-6 text-white"></i>
+            </div>
+            <div>
+                <h1 class="text-lg font-bold tracking-tight text-white flex items-center gap-2">
+                    Wireless Android Manager
+                    <span class="text-xs px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">v1.0</span>
+                </h1>
+                <p class="text-xs text-gray-400">Zero-config Debugging & File Explorer</p>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-3 text-xs">
+            <div id="adbStatusBadge" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-800 border border-gray-700 text-gray-300">
+                <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                <span>ADB Ready</span>
+            </div>
+            <div id="scrcpyStatusBadge" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-800 border border-gray-700 text-gray-300">
+                <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                <span>scrcpy Ready</span>
+            </div>
+            <button onclick="refreshData()" class="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 transition">
+                <i data-lucide="refresh-cw" class="w-4 h-4" id="refreshIcon"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-6 space-y-6">
+
+        <!-- Discovery & Quick Connect Banner -->
+        <section class="bg-gradient-to-r from-blue-900/30 to-indigo-900/20 border border-blue-500/20 rounded-2xl p-5 shadow-xl">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div class="flex items-start space-x-4">
+                    <div class="p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl text-blue-400">
+                        <i data-lucide="wifi" class="w-6 h-6 pulse-scanning"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-sm font-semibold text-white uppercase tracking-wider">mDNS Auto-Discovery</h2>
+                        <p class="text-xs text-gray-300 mt-1 max-w-xl">
+                            Mendeteksi perangkat Android 11+ di Wi-Fi lokal secara otomatis. Tidak perlu mencari port dynamic secara manual.
+                        </p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button onclick="openPairModal()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-2 shadow-lg shadow-indigo-600/20 transition">
+                        <i data-lucide="key" class="w-4 h-4"></i>
+                        <span>Pairing Baru (PIN)</span>
+                    </button>
+                    <button onclick="openManualConnectModal()" class="px-4 py-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 text-xs font-medium flex items-center gap-2 transition">
+                        <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                        <span>Manual Connect</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Discovered mDNS Cards Container -->
+            <div id="mdnsDiscoveredList" class="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 hidden">
+                <!-- Injected via JavaScript -->
+            </div>
+        </section>
+
+        <!-- Connected Devices Section -->
+        <section class="space-y-3">
+            <div class="flex items-center justify-between">
+                <h2 class="text-sm font-semibold uppercase tracking-wider text-gray-400 flex items-center gap-2">
+                    <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400"></i>
+                    Perangkat Terhubung (<span id="connectedCount">0</span>)
+                </h2>
+            </div>
+
+            <div id="devicesContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Device cards rendered here -->
+            </div>
+
+            <div id="noDevicesPlaceholder" class="text-center py-12 border border-dashed border-gray-800 rounded-2xl bg-dark-800/40">
+                <i data-lucide="smartphone-charging" class="w-12 h-12 text-gray-600 mx-auto mb-3"></i>
+                <p class="text-sm text-gray-400 font-medium">Belum ada perangkat terhubung</p>
+                <p class="text-xs text-gray-500 mt-1">Aktifkan Wireless Debugging di HP atau colokkan kabel USB untuk memulai.</p>
+            </div>
+        </section>
+
+        <!-- Active Device Control & File Explorer Section (Shown when device is selected) -->
+        <section id="activeDevicePanel" class="space-y-4 hidden">
+            <!-- Navigation Tabs -->
+            <div class="border-b border-gray-800 flex items-center justify-between">
+                <div class="flex space-x-6 text-sm font-medium">
+                    <button onclick="switchTab('files')" id="tabFiles" class="py-3 text-blue-400 border-b-2 border-blue-500 flex items-center gap-2">
+                        <i data-lucide="folder" class="w-4 h-4"></i>
+                        <span>File Explorer (/sdcard)</span>
+                    </button>
+                    <button onclick="switchTab('logcat')" id="tabLogcat" class="py-3 text-gray-400 hover:text-gray-200 flex items-center gap-2">
+                        <i data-lucide="terminal" class="w-4 h-4"></i>
+                        <span>Live Logcat</span>
+                    </button>
+                </div>
+
+                <div class="flex items-center gap-2 text-xs text-gray-400">
+                    <span>Target: </span>
+                    <span id="activeDeviceLabel" class="font-semibold text-gray-200"></span>
+                </div>
+            </div>
+
+            <!-- Tab 1: File Explorer -->
+            <div id="fileExplorerTab" class="bg-dark-800 border border-gray-800 rounded-2xl p-5 space-y-4 shadow-xl">
+                <!-- Quick Folder Shortcuts -->
+                <div class="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
+                    <span class="text-gray-500 text-[11px] whitespace-nowrap">Akses Cepat:</span>
+                    <button onclick="loadFiles('/sdcard/Download')" class="px-2.5 py-1 rounded-lg bg-gray-900 hover:bg-gray-700 text-gray-300 border border-gray-800 whitespace-nowrap transition">
+                        📥 Download
+                    </button>
+                    <button onclick="loadFiles('/sdcard/DCIM/Camera')" class="px-2.5 py-1 rounded-lg bg-gray-900 hover:bg-gray-700 text-gray-300 border border-gray-800 whitespace-nowrap transition">
+                        📸 DCIM / Kamera
+                    </button>
+                    <button onclick="loadFiles('/sdcard/Pictures')" class="px-2.5 py-1 rounded-lg bg-gray-900 hover:bg-gray-700 text-gray-300 border border-gray-800 whitespace-nowrap transition">
+                        🖼️ Pictures
+                    </button>
+                    <button onclick="loadFiles('/sdcard/Documents')" class="px-2.5 py-1 rounded-lg bg-gray-900 hover:bg-gray-700 text-gray-300 border border-gray-800 whitespace-nowrap transition">
+                        📄 Documents
+                    </button>
+                    <button onclick="loadFiles('/sdcard/Music')" class="px-2.5 py-1 rounded-lg bg-gray-900 hover:bg-gray-700 text-gray-300 border border-gray-800 whitespace-nowrap transition">
+                        🎵 Music
+                    </button>
+                    <button onclick="loadFiles('/sdcard')" class="px-2.5 py-1 rounded-lg bg-gray-900 hover:bg-gray-700 text-gray-300 border border-gray-800 whitespace-nowrap transition">
+                        🏠 Root (/sdcard)
+                    </button>
+                </div>
+
+                <!-- Breadcrumbs & Actions -->
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-gray-700/60">
+                    <div class="flex items-center space-x-2 text-xs">
+                        <span class="text-gray-400">Direktori:</span>
+                        <div id="breadcrumbContainer" class="flex items-center gap-1 font-mono text-gray-200 bg-gray-900 px-3 py-1.5 rounded-lg border border-gray-800">
+                            /sdcard
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <button onclick="createNewFolder()" class="px-3 py-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs font-medium flex items-center gap-1.5 transition">
+                            <i data-lucide="folder-plus" class="w-4 h-4"></i>
+                            <span>Folder Baru</span>
+                        </button>
+                        <input type="file" id="fileUploadInput" multiple class="hidden" onchange="handleFileUpload(event)">
+                        <button onclick="document.getElementById('fileUploadInput').click()" class="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold flex items-center gap-1.5 transition">
+                            <i data-lucide="upload" class="w-4 h-4"></i>
+                            <span>Upload File</span>
+                        </button>
+                        <button onclick="loadFiles(currentPath)" class="p-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-gray-300 transition">
+                            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Drag & Drop Zone -->
+                <div id="dropZone" class="border-2 border-dashed border-gray-700 rounded-xl p-4 text-center text-xs text-gray-400 hover:border-gray-500 transition cursor-pointer" onclick="document.getElementById('fileUploadInput').click()">
+                    <i data-lucide="arrow-up-circle" class="w-6 h-6 mx-auto mb-1 text-gray-500"></i>
+                    <span>Tarik dan lepaskan file ke sini untuk mengunggah langsung ke HP</span>
+                </div>
+
+                <!-- File Table -->
+                <div class="overflow-x-auto max-h-96">
+                    <table class="w-full text-left text-xs">
+                        <thead class="text-gray-400 uppercase bg-gray-900/60 sticky top-0 border-b border-gray-800">
+                            <tr>
+                                <th class="py-2.5 px-3">Nama</th>
+                                <th class="py-2.5 px-3">Ukuran</th>
+                                <th class="py-2.5 px-3">Tanggal</th>
+                                <th class="py-2.5 px-3 text-right">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="fileListBody" class="divide-y divide-gray-800 font-mono">
+                            <!-- Files list injected here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tab 2: Logcat -->
+            <div id="logcatTab" class="bg-dark-800 border border-gray-800 rounded-2xl p-5 space-y-3 hidden">
+                <div class="flex items-center justify-between">
+                    <input type="text" id="logcatFilter" placeholder="Filter logcat (misal: Fatal, MyApp, Error)..." 
+                           oninput="filterLogs()" class="bg-gray-900 border border-gray-700 rounded-lg px-3 py-1.5 text-xs text-gray-200 w-80 focus:outline-none focus:border-blue-500">
+                    <button onclick="fetchLogcat()" class="px-3 py-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-xs text-gray-200 flex items-center gap-1.5">
+                        <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                        <span>Segarkan Log</span>
+                    </button>
+                </div>
+                <div id="logcatBox" class="bg-black/80 rounded-xl p-4 font-mono text-xs text-emerald-400 h-96 overflow-y-auto space-y-1">
+                    <!-- Logs injected here -->
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Modal: Pairing Baru -->
+    <div id="pairModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+        <div class="bg-dark-800 border border-gray-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between border-b border-gray-700/60 pb-3">
+                <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                    <i data-lucide="key" class="w-4 h-4 text-indigo-400"></i>
+                    Pairing Perangkat Baru
+                </h3>
+                <button onclick="closePairModal()" class="text-gray-400 hover:text-white">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <p class="text-xs text-gray-400 leading-relaxed">
+                1. Buka HP -> <b>Developer Options</b> -> <b>Wireless debugging</b><br>
+                2. Pilih <b>"Pair device with pairing code"</b><br>
+                3. Masukkan data yang muncul di layar HP Anda ke form di bawah:
+            </p>
+
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="block text-gray-400 mb-1">Alamat IP:</label>
+                    <input type="text" id="pairIp" placeholder="192.168.0.71" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2.5 text-gray-200 focus:outline-none focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-gray-400 mb-1">Pairing Port (bukan port connect):</label>
+                    <input type="text" id="pairPort" placeholder="38291" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2.5 text-gray-200 focus:outline-none focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-gray-400 mb-1">6-Digit Pairing Code (PIN):</label>
+                    <input type="text" id="pairPin" placeholder="123456" maxlength="6" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2.5 text-gray-200 font-mono text-center text-lg tracking-widest focus:outline-none focus:border-indigo-500">
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-2 pt-2">
+                <button onclick="closePairModal()" class="px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-xs text-gray-300">Batal</button>
+                <button onclick="submitPairing()" id="pairBtn" class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white">Pasangkan (Pair)</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Manual Connect -->
+    <div id="manualConnectModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+        <div class="bg-dark-800 border border-gray-800 rounded-2xl max-w-sm w-full p-6 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between border-b border-gray-700/60 pb-3">
+                <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                    <i data-lucide="link" class="w-4 h-4 text-blue-400"></i>
+                    Manual Connect
+                </h3>
+                <button onclick="closeManualConnectModal()" class="text-gray-400 hover:text-white">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="block text-gray-400 mb-1">Alamat IP:</label>
+                    <input type="text" id="manualIp" placeholder="192.168.0.71" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2.5 text-gray-200 focus:outline-none focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block text-gray-400 mb-1">Port (default: 5555 atau port dynamic):</label>
+                    <input type="text" id="manualPort" placeholder="37739" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2.5 text-gray-200 focus:outline-none focus:border-blue-500">
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-2 pt-2">
+                <button onclick="closeManualConnectModal()" class="px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-xs text-gray-300">Batal</button>
+                <button onclick="submitManualConnect()" id="connectBtn" class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-xs font-semibold text-white">Hubungkan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="fixed bottom-6 right-6 z-50 space-y-2"></div>
+
+    <script src="/app.js"></script>
+</body>
+</html>
